@@ -4,6 +4,7 @@
 pr_day_CMCC-CM2-SR5_historical_r1i1p1f1_gn_20000101-20141231.nc
 slides/
 data_reduce/*.nc
+*.txt
 
 ### C ###
 # Prerequisites
