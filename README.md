@@ -63,3 +63,4 @@
 - Add Parallelization
 - Add a for cicle for the reading of different files
 - Add a better way to handle different .c files, e.g. create a main.c to handle the different .c files using a switch or args, or read the file_names from a txt.
+- Test on fire!
