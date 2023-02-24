@@ -3,20 +3,22 @@
 //   https://docs.unidata.ucar.edu/netcdf-c/current/pres__temp__4D__wr_8c.html for writing task
 
 #include <stdio.h>
-#include <mpi.h>
+// #include <mpi.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
-#include <stddef.h>
+// #include <stddef.h>
 
-#include "utils.h"
+// #include "utils.h"
 
 /*Change input netCDF path here*/
-#define INPUT_FILE "/shares/HPC4DataScience/pta/CMCC-CM2-SR5_historical/pr_day_CMCC-CM2-SR5_historical_r1i1p1f1_gn_18500101-18741231.nc"
+#define INPUT_FILE "/shares/HPC4DataScience/pta/CMCC-CM2-SR5_historical/pr_day_CMCC-CM2-SR5_historical_r1i1p1f1_gn_20000101-20141231.nc" // 20000101-20141231 18500101-18741231
 /*Define output name file. Saved in the same directory of serial.c*/
 #define OUTPUT_FILE "pr_reduce.nc"
 
+#define NLAT 192
+#define NLON 288
 #define START_LAT -90.0
 #define START_LON 0.0
 #define LAT_NAME "lat"
@@ -41,7 +43,7 @@ int main(){
     int pr_varid, lat_varid, lon_varid;
     int lon_dimid, lat_dimid, time_dimid;
     int ndims;
-    size_t nlat, nlon, ntime;
+    size_t ntime;
 
     /* GET INFO STEP*/
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
@@ -53,11 +55,12 @@ int main(){
     if ((retval = nc_inq_dimid(ncid, LON_NAME, &lon_dimid))) ERR(retval);
     if ((retval = nc_inq_dimid(ncid, TIME_NAME, &time_dimid))) ERR(retval);
 
-    if ((retval = nc_inq_dimlen(ncid, lat_dimid, &nlat))) ERR(retval);
-    if ((retval = nc_inq_dimlen(ncid, lon_dimid, &nlon))) ERR(retval);
     if ((retval = nc_inq_dimlen(ncid, time_dimid, &ntime))) ERR(retval);
 
-    printf("--- INFO: found dim = %d, nlat = %zu, nlon = %zu, ntime = %zu ---\n", ndims, nlat, nlon, ntime);
+    /*DEBUG: Check dim and time dimension
+    printf("--- INFO: found dim = %d and ntime = %zu ---\n", ndims, ntime);
+    */
+
     ndims -= 1; // we do not use the bnds dimension, so we need to reduce by one the total number of dims
 
     /* Retrieve variables info */
@@ -65,7 +68,7 @@ int main(){
     if ((retval = nc_inq_varid(ncid, LON_NAME, &lon_varid))) ERR(retval);
     if ((retval = nc_inq_varid(ncid, PR_NAME, &pr_varid))) ERR(retval);
 
-    float lats[nlat], lons[nlon];
+    float lats[NLAT], lons[NLON];
     if ((retval = nc_get_var_float(ncid, lat_varid, &lats[0]))) ERR(retval);  /* Read the coordinate variable data. */
     if ((retval = nc_get_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
         
@@ -77,17 +80,17 @@ int main(){
     */
 
     /* READING STEP*/
-    float pr_in[nlat][nlon], pr_out[nlat][nlon];
+    float pr_in[NLAT][NLON], pr_out[NLAT][NLON];
     size_t start[] = {0, 0, 0}; // 3-dim array
-    size_t count[] = {1, nlat, nlon}; // 3-dim array 
+    size_t count[] = {1, NLAT, NLON}; // 3-dim array 
 
     /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
     for (int time = 0; time < ntime; time++){
         start[0] = time;
         if ((retval = nc_get_vara_float(ncid, pr_varid, start, count, &pr_in[0][0]))) ERR(retval);
 
-        for(int lat = 0; lat < nlat; lat++){
-            for(int lon = 0; lon < nlon; lon++){
+        for(int lat = 0; lat < NLAT; lat++){
+            for(int lon = 0; lon < NLON; lon++){
                 pr_out[lat][lon] = pr_out[lat][lon] + pr_in[lat][lon];
             }
         }
@@ -97,8 +100,8 @@ int main(){
     if ((retval = nc_close(ncid))) ERR(retval);
 
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
-    for(int lat = 0; lat < nlat; lat++){
-        for(int lon = 0; lon < nlon ; lon++){
+    for(int lat = 0; lat < NLAT; lat++){
+        for(int lon = 0; lon < NLON ; lon++){
             pr_out[lat][lon] /= ntime;
         }
     }
@@ -110,8 +113,8 @@ int main(){
     /* Create the file */
     if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
 
-    if ((retval = nc_def_dim(ncid, LAT_NAME, nlat, &lat_dimid))) ERR(retval);
-    if ((retval = nc_def_dim(ncid, LON_NAME, nlon, &lon_dimid))) ERR(retval);
+    if ((retval = nc_def_dim(ncid, LAT_NAME, NLAT, &lat_dimid))) ERR(retval);
+    if ((retval = nc_def_dim(ncid, LON_NAME, NLON, &lon_dimid))) ERR(retval);
     if ((retval = nc_def_dim(ncid, TIME_NAME, 1, &time_dimid))) ERR(retval); // from NC_UNLIMITED to 1 because we reduce the time
 
     if ((retval = nc_def_var(ncid, LAT_NAME, NC_FLOAT, 1, &lat_dimid, &lat_varid))) ERR(retval);
@@ -129,7 +132,7 @@ int main(){
     if ((retval = nc_put_var_float(ncid, lat_varid, &lats[0]))) ERR(retval);
     if ((retval = nc_put_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
 
-    count[0] = 1; count[1] = nlat; count[2] = nlon;
+    count[0] = 1; count[1] = NLAT; count[2] = NLON;
     start[0] = 0; start[1] = 0; start[2] = 0;
 
     /* Write in the new netCDF file the average over the years for each point of the grid of the precipitations */

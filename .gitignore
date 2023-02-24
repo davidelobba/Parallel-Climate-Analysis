@@ -4,6 +4,10 @@
 # Our files
 *.nc
 *.txt
+vgcore*
+core*
+*.e*
+*.o*
 
 ### C ###
 # Prerequisites
