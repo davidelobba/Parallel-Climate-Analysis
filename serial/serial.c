@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
+#include <time.h>
 // #include <stddef.h>
 
 // #include "utils.h"
@@ -36,6 +37,7 @@
 
 int main(){
 
+    clock_t start_time, end_time;
     int retval;
 
     /* netCDF file ID and variable ID */
@@ -47,6 +49,8 @@ int main(){
 
     /* GET INFO STEP*/
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
+    start_time = clock();
+
     if ((retval = nc_open(INPUT_FILE, NC_NOWRITE, &ncid))) ERR(retval);
     /* Retrieve dimensions info */
     if ((retval = nc_inq_ndims(ncid, &ndims))) ERR(retval);
@@ -71,7 +75,12 @@ int main(){
     float lats[NLAT], lons[NLON];
     if ((retval = nc_get_var_float(ncid, lat_varid, &lats[0]))) ERR(retval);  /* Read the coordinate variable data. */
     if ((retval = nc_get_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
-        
+    
+    end_time = clock();
+
+    /* DEBUG: time for execution*/
+    printf("## Time GET INFO STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+
     /* DEBUG: Check if lats and lons were read correctly
     for (int lat = 0; lat < nlat; lat++)
         printf("%f \n", lats[lat]);
@@ -80,6 +89,8 @@ int main(){
     */
 
     /* READING STEP*/
+    start_time = clock();
+
     float pr_in[NLAT][NLON], pr_out[NLAT][NLON];
     size_t start[] = {0, 0, 0}; // 3-dim array
     size_t count[] = {1, NLAT, NLON}; // 3-dim array 
@@ -96,9 +107,6 @@ int main(){
         }
     }
 
-    /* Close the file */
-    if ((retval = nc_close(ncid))) ERR(retval);
-
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
     for(int lat = 0; lat < NLAT; lat++){
         for(int lon = 0; lon < NLON ; lon++){
@@ -106,10 +114,19 @@ int main(){
         }
     }
 
+    end_time = clock();
+
+    /* DEBUG: time for execution*/
+    printf("## Time READING STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+
+    /* Close the file */
+    if ((retval = nc_close(ncid))) ERR(retval);
+
     printf("--- SUCCESS reading data from file %s ---\n", INPUT_FILE);
 
 
     /* WRITING STEP*/
+    start_time = clock();
     /* Create the file */
     if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
 
@@ -137,6 +154,11 @@ int main(){
 
     /* Write in the new netCDF file the average over the years for each point of the grid of the precipitations */
     if ((retval = nc_put_vara_float(ncid, pr_varid, start, count, &pr_out[0][0]))) ERR(retval);
+
+    end_time = clock();
+
+    /* DEBUG: time for execution*/
+    printf("## Time WRITING STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 
     /*Close the file, freeing all resources */
     if ((retval = nc_close(ncid))) ERR(retval);       
