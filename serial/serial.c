@@ -79,7 +79,7 @@ int main(){
     end_time = clock();
 
     /* DEBUG: time for execution*/
-    printf("## Time GET INFO STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time GET INFO STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 
     /* DEBUG: Check if lats and lons were read correctly
     for (int lat = 0; lat < nlat; lat++)
@@ -117,7 +117,7 @@ int main(){
     end_time = clock();
 
     /* DEBUG: time for execution*/
-    printf("## Time READING STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time READING STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 
     /* Close the file */
     if ((retval = nc_close(ncid))) ERR(retval);
@@ -158,7 +158,7 @@ int main(){
     end_time = clock();
 
     /* DEBUG: time for execution*/
-    printf("## Time WRITING STEP: %f ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time WRITING STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 
     /*Close the file, freeing all resources */
     if ((retval = nc_close(ncid))) ERR(retval);       
