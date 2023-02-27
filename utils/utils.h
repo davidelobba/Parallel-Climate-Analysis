@@ -8,8 +8,6 @@
 #include <math.h>
 #include <netcdf.h>
 
-
 void combine(char* destination, const char* path1, const char* path2);
-
 
 #endif
