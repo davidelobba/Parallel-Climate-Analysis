@@ -3,12 +3,12 @@
 //   https://docs.unidata.ucar.edu/netcdf-c/current/pres__temp__4D__wr_8c.html for writing task
 
 #include <stdio.h>
-// #include <mpi.h>
+#include <mpi.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
-#include <time.h>
+// #include <time.h>
 // #include <stddef.h>
 
 // #include "utils.h"
@@ -36,8 +36,10 @@
 #define ERR(e) {printf("Error: %s\n", nc_strerror(e)); return 2;}
 
 int main(){
+    
+    MPI_Init(NULL, NULL);
 
-    clock_t start_time, end_time;
+    double start_time, end_time;
     int retval;
 
     /* netCDF file ID and variable ID */
@@ -49,7 +51,7 @@ int main(){
 
     /* GET INFO STEP*/
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
-    start_time = clock();
+    start_time = MPI_Wtime();
 
     if ((retval = nc_open(INPUT_FILE, NC_NOWRITE, &ncid))) ERR(retval);
     /* Retrieve dimensions info */
@@ -76,10 +78,10 @@ int main(){
     if ((retval = nc_get_var_float(ncid, lat_varid, &lats[0]))) ERR(retval);  /* Read the coordinate variable data. */
     if ((retval = nc_get_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
     
-    end_time = clock();
+    end_time = MPI_Wtime();
 
     /* DEBUG: time for execution*/
-    printf("## Time GET INFO STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time GET INFO STEP: %f seconds ##\n", end_time - start_time);
 
     /* DEBUG: Check if lats and lons were read correctly
     for (int lat = 0; lat < nlat; lat++)
@@ -89,7 +91,7 @@ int main(){
     */
 
     /* READING STEP*/
-    start_time = clock();
+    start_time = MPI_Wtime();
 
     float pr_in[NLAT][NLON], pr_out[NLAT][NLON];
     size_t start[] = {0, 0, 0}; // 3-dim array
@@ -107,11 +109,11 @@ int main(){
         }
     }
 
-    end_time = clock();
+    end_time = MPI_Wtime();
     /* DEBUG: time for execution*/
-    printf("## Time READING STEP 1: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time READING STEP 1: %f seconds ##\n", end_time - start_time);
 
-    start_time = clock();
+    start_time = MPI_Wtime();
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
     for(int lat = 0; lat < NLAT; lat++){
         for(int lon = 0; lon < NLON ; lon++){
@@ -119,10 +121,10 @@ int main(){
         }
     }
 
-    end_time = clock();
+    end_time = MPI_Wtime();
 
     /* DEBUG: time for execution*/
-    printf("## Time READING STEP 2: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time READING STEP 2: %f seconds ##\n", end_time - start_time);
 
     /* Close the file */
     if ((retval = nc_close(ncid))) ERR(retval);
@@ -131,7 +133,7 @@ int main(){
 
 
     /* WRITING STEP*/
-    start_time = clock();
+    start_time = MPI_Wtime();
     /* Create the file */
     if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
 
@@ -160,15 +162,16 @@ int main(){
     /* Write in the new netCDF file the average over the years for each point of the grid of the precipitations */
     if ((retval = nc_put_vara_float(ncid, pr_varid, start, count, &pr_out[0][0]))) ERR(retval);
 
-    end_time = clock();
+    end_time = MPI_Wtime();
 
     /* DEBUG: time for execution*/
-    printf("## Time WRITING STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time WRITING STEP: %f seconds ##\n", end_time - start_time);
 
     /*Close the file, freeing all resources */
     if ((retval = nc_close(ncid))) ERR(retval);       
 
     printf("--- SUCCESS writing data on file %s ---\n", OUTPUT_FILE);
     
+    MPI_Finalize();
     return 0;
 }
