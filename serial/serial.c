@@ -45,7 +45,7 @@ int main(){
     int pr_varid, lat_varid, lon_varid;
     int lon_dimid, lat_dimid, time_dimid;
     int ndims;
-    size_t ntime;
+    size_t nrecord;
 
     /* GET INFO STEP*/
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
@@ -59,10 +59,10 @@ int main(){
     if ((retval = nc_inq_dimid(ncid, LON_NAME, &lon_dimid))) ERR(retval);
     if ((retval = nc_inq_dimid(ncid, TIME_NAME, &time_dimid))) ERR(retval);
 
-    if ((retval = nc_inq_dimlen(ncid, time_dimid, &ntime))) ERR(retval);
+    if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord))) ERR(retval);
 
     /*DEBUG: Check dim and time dimension
-    printf("--- INFO: found dim = %d and ntime = %zu ---\n", ndims, ntime);
+    printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord);
     */
 
     ndims -= 1; // we do not use the bnds dimension, so we need to reduce by one the total number of dims
@@ -96,8 +96,8 @@ int main(){
     size_t count[] = {1, NLAT, NLON}; // 3-dim array 
 
     /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
-    for (int time = 0; time < ntime; time++){
-        start[0] = time;
+    for (int rec = 0; rec < nrecord; rec++){
+        start[0] = rec;
         if ((retval = nc_get_vara_float(ncid, pr_varid, start, count, &pr_in[0][0]))) ERR(retval);
 
         for(int lat = 0; lat < NLAT; lat++){
@@ -107,17 +107,22 @@ int main(){
         }
     }
 
+    end_time = clock();
+    /* DEBUG: time for execution*/
+    printf("## Time READING STEP 1: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+
+    start_time = clock();
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
     for(int lat = 0; lat < NLAT; lat++){
         for(int lon = 0; lon < NLON ; lon++){
-            pr_out[lat][lon] /= ntime;
+            pr_out[lat][lon] /= nrecord;
         }
     }
 
     end_time = clock();
 
     /* DEBUG: time for execution*/
-    printf("## Time READING STEP: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
+    printf("## Time READING STEP 2: %f seconds ##\n", ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 
     /* Close the file */
     if ((retval = nc_close(ncid))) ERR(retval);
