@@ -8,8 +8,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
-// #include <time.h>
-// #include <stddef.h>
+
+#ifdef _OPENMP
+    #include <omp.h> //version 201107 -> 3.1
+#endif
 
 // #include "utils.h"
 
@@ -35,7 +37,13 @@
 
 #define ERR(e) {printf("Error: %s\n", nc_strerror(e)); return 2;}
 
-int main(){
+int main(int argc, char* argv[]){
+
+    #ifdef _OPENMP
+    printf("OpenMP version: %d\n", _OPENMP);
+    #else
+    printf("No OpenMP support\n");
+    #endif
 
     MPI_Init(NULL, NULL);
 
@@ -49,7 +57,7 @@ int main(){
     if (world_rank == 0) printf("--- INFO: World size = %d ---\n", world_size);
 
     double start_time, end_time;
-    int retval;
+    int retval, thread_count;
 
     /* netCDF file ID and variable ID */
     int ncid;
@@ -109,19 +117,55 @@ int main(){
     const int rec_per_process = nrecord/world_size;
     int local_start_record = world_rank * rec_per_process;
     int local_end_record = (world_rank + 1) * rec_per_process;
+    int lat, lon;
+
+    if(argc > 0) thread_count = strtol(argv[1], NULL, 10);
+
+    // #ifdef _OPENMP
+    //     int thread_rank = omp_get_thread_num();
+    //     int thread_count = omp_get_num_threads();
+    // #else
+    //     int thread_rank = 0;
+    //     int thread_count = 1;
+    // #endif
 
     if (world_rank == world_size - 1) local_end_record = nrecord; // manage the last batch of record that may not be divided properly
 
-    /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
-    for (int rec = local_start_record; rec < local_end_record; rec++){
-        start[0] = rec;
-        if ((retval = nc_get_vara_float(ncid, pr_varid, start, count, &local_pr_in[0][0]))) ERR(retval);
+    //OMP on NLAT NLON
+    // /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
+    // for (int rec = local_start_record; rec < local_end_record; rec++){
+    //     start[0] = rec;
+    //     if ((retval = nc_get_vara_float(ncid, pr_varid, start, count, &local_pr_in[0][0]))) ERR(retval);
 
-        for(int lat = 0; lat < NLAT; lat++){ //MPI_Scatter applied here because we know pr_in, our vector
-            for(int lon = 0; lon < NLON; lon++){
+    //     //start_time = omp_get_wtime();
+    //     #pragma omp parallel num_threads(thread_count) default(none) private(lat, lon) shared(local_pr_out, local_pr_in)
+    //         // collapse(2) reference: https://stackoverflow.com/questions/13357065/how-does-openmp-handle-nested-loops // in omp for the index are default private, but for coherence we explicitly declare it
+    //         #pragma omp for collapse(2)
+    //             for(lat = 0; lat < NLAT; lat++){
+    //                 for(lon = 0; lon < NLON; lon++){
+    //                     local_pr_out[lat][lon] = local_pr_out[lat][lon] + local_pr_in[lat][lon];
+    //                     //printf("# of rank thread: %d", omp_get_thread_num());
+    //                 }
+    //         }
+    //     //#pragma omp  barrier //Implicit barrier at: end of parallel do/for, single
+    // }
+
+    //OMP on NTIME
+    /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
+    int rec;
+    #pragma omp parallel for num_threads(thread_count) \
+            default(shared) private(rec, lat, lon, local_pr_in) reduction(+:local_pr_out) schedule(auto) // default(none) private(rec, lat, lon, local_pr_in) shared(local_pr_out) \ reduction(+:local_pr_out) schedule(auto)
+    for (rec = local_start_record; rec < local_end_record; rec++){
+        start[0] = rec;
+        //if ((retval = nc_get_vara_float(ncid, pr_varid, start, count, &local_pr_in[0][0]))) ERR(retval);
+        nc_get_vara_float(ncid, pr_varid, start, count, &local_pr_in[0][0]);
+        for(lat = 0; lat < NLAT; lat++){
+            for(lon = 0; lon < NLON; lon++){
                 local_pr_out[lat][lon] = local_pr_out[lat][lon] + local_pr_in[lat][lon];
+                //printf("# of rank thread: %d", omp_get_thread_num());
             }
         }
+        //#pragma omp  barrier //Implicit barrier at: end of parallel do/for, single
     }
 
     end_time = MPI_Wtime();

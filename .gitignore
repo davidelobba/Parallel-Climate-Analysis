@@ -3,11 +3,11 @@
 
 # Our files
 *.nc
-*.txt
 vgcore*
 core*
 *.e*
 *.o*
+.ipynb_checkpoints
 
 ### C ###
 # Prerequisites
