@@ -4,6 +4,12 @@
 #PBS -q short_cpuQ
 #PBS -v NUM_NODES,CPUS_PER_NODE,PROCESSES,THREADS
 
+echo number of processes ${PROCESSES}
+echo number of cores per node ${CPUS_PER_NODE}
+echo number of nodes ${NUM_NODES}
+echo number of threads ${THREADS}
+echo ""
+
 # load modules
 module load mpich-3.2 hdf5-1.10.5--gcc-9.1.0 netcdf-4.7.0--gcc-9.1.0
 
