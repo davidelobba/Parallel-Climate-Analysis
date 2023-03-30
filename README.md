@@ -7,14 +7,11 @@
     - CMCC
     - MPI-ESM1
   - For every simulation there will be data from 1850 to 2100.
-  - 
+
 ### Useful links
 - NETCDF
   - Official site https://www.unidata.ucar.edu/software/netcdf/
-  - Professor's slides 
-- Docker
-  - Cheatsheet https://dockerlabs.collabnix.com/docker/cheatsheet/
-  - Work on a container inside VSCode https://stackoverflow.com/questions/69326427/select-interpreter-of-docker-container-in-the-vscode
+  - Professor's slides
 
 ### Workflow
 1. Understand the problem and analyse the type of data that we are working on (combine data together, parallelize the loading of data)

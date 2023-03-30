@@ -8,6 +8,9 @@ core*
 *.e*
 *.o*
 .ipynb_checkpoints
+utils
+output
+makefile
 
 ### C ###
 # Prerequisites

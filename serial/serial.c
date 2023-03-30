@@ -8,15 +8,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
-// #include <time.h>
-// #include <stddef.h>
 
-// #include "utils.h"
+//#define LOG /*Print log on command line*/
+#define PRINT_TIME /*Print time on command line*/
 
-/*Change input netCDF path here*/
-#define INPUT_FILE "/shares/HPC4DataScience/pta/CMCC-CM2-SR5_historical/pr_day_CMCC-CM2-SR5_historical_r1i1p1f1_gn_20000101-20141231.nc" // 20000101-20141231 18500101-18741231
-/*Define output name file. Saved in the same directory of serial.c*/
-#define OUTPUT_FILE "pr_reduce.nc"
+#define INPUT_FILE "/home/francesco.laiti/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
+#define OUTPUT_FILE "output/pr_reduced.nc" /*Define output name file. Saved in the same directory of serial.c*/
 
 #define NLAT 192
 #define NLON 288
@@ -49,7 +46,7 @@ int main(){
     int ndims;
     size_t nrecord;
 
-    /* GET INFO STEP*/
+    /* --- GET INFO STEP --- */
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
     start_time = MPI_Wtime();
 
@@ -63,9 +60,10 @@ int main(){
 
     if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord))) ERR(retval);
 
-    /*DEBUG: Check dim and time dimension
+    #ifdef LOG
+    /*DEBUG: Check dim and time dimension */
     printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord);
-    */
+    #endif
 
     ndims -= 1; // we do not use the bnds dimension, so we need to reduce by one the total number of dims
 
@@ -80,17 +78,18 @@ int main(){
     
     end_time = MPI_Wtime();
 
-    /* DEBUG: time for execution*/
+    #ifdef LOG
+    /* DEBUG: time for execution */
     printf("## Time GET INFO STEP: %f seconds ##\n", end_time - start_time);
 
-    /* DEBUG: Check if lats and lons were read correctly
-    for (int lat = 0; lat < nlat; lat++)
+    /* DEBUG: Check if lats and lons were read correctly */
+    for (int lat = 0; lat < NLAT; lat++)
         printf("%f \n", lats[lat]);
-    for (int lon = 0; lon < nlon; lon++)
+    for (int lon = 0; lon < NLON; lon++)
         printf("%f \n", lons[lon]);
-    */
+    #endif
 
-    /* READING STEP*/
+    /* --- READING STEP --- */
     start_time = MPI_Wtime();
 
     float pr_in[NLAT][NLON], pr_out[NLAT][NLON];
@@ -110,8 +109,10 @@ int main(){
     }
 
     end_time = MPI_Wtime();
-    /* DEBUG: time for execution*/
-    printf("## Time READING STEP 1: %f seconds ##\n", end_time - start_time);
+
+    #ifdef PRINT_TIME
+    printf("## Time READING STEP 1: %f seconds ##\n", end_time - start_time); /* DEBUG: time for execution*/
+    #endif
 
     start_time = MPI_Wtime();
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
@@ -123,27 +124,30 @@ int main(){
 
     end_time = MPI_Wtime();
 
+    //#ifdef PRINT_TIME
     /* DEBUG: time for execution*/
-    printf("## Time READING STEP 2: %f seconds ##\n", end_time - start_time);
+    //printf("## Time READING STEP 2: %f seconds ##\n", end_time - start_time);
+    //#endif
 
     /* Close the file */
     if ((retval = nc_close(ncid))) ERR(retval);
 
+    #ifdef LOG
     printf("--- SUCCESS reading data from file %s ---\n", INPUT_FILE);
+    #endif
 
-
-    /* WRITING STEP*/
+    /* --- WRITING STEP --- */
     start_time = MPI_Wtime();
     /* Create the file */
     if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
 
     if ((retval = nc_def_dim(ncid, LAT_NAME, NLAT, &lat_dimid))) ERR(retval);
     if ((retval = nc_def_dim(ncid, LON_NAME, NLON, &lon_dimid))) ERR(retval);
-    if ((retval = nc_def_dim(ncid, TIME_NAME, 1, &time_dimid))) ERR(retval); // from NC_UNLIMITED to 1 because we reduce the time
 
     if ((retval = nc_def_var(ncid, LAT_NAME, NC_FLOAT, 1, &lat_dimid, &lat_varid))) ERR(retval);
     if ((retval = nc_def_var(ncid, LON_NAME, NC_FLOAT, 1, &lon_dimid, &lon_varid))) ERR(retval);
-    int dimids[] = {time_dimid, lat_dimid, lon_dimid}; // 3-dim array
+    int dimids[] = {lat_dimid, lon_dimid}; // 2-dim array
+    ndims -= 1; // we do not use the time dimension, so we need to reduce by one the total number of dims
     if ((retval = nc_def_var(ncid, PR_NAME, NC_FLOAT, ndims, dimids, &pr_varid))) ERR(retval); /* Define the netCDF variables for the precipitation data */
 
     if ((retval = nc_put_att_text(ncid, lat_varid, UNITS, strlen(DEGREES_NORTH), DEGREES_NORTH))) ERR(retval);
@@ -156,22 +160,26 @@ int main(){
     if ((retval = nc_put_var_float(ncid, lat_varid, &lats[0]))) ERR(retval);
     if ((retval = nc_put_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
 
-    count[0] = 1; count[1] = NLAT; count[2] = NLON;
-    start[0] = 0; start[1] = 0; start[2] = 0;
+    size_t count_write[] = {NLAT, NLON}; // 2-dim array
+    size_t start_write[] = {0, 0}; // 2-dim array 
 
     /* Write in the new netCDF file the average over the years for each point of the grid of the precipitations */
-    if ((retval = nc_put_vara_float(ncid, pr_varid, start, count, &pr_out[0][0]))) ERR(retval);
+    if ((retval = nc_put_vara_float(ncid, pr_varid, start_write, count_write, &pr_out[0][0]))) ERR(retval);
 
     end_time = MPI_Wtime();
 
+    #ifdef PRINT_TIME
     /* DEBUG: time for execution*/
     printf("## Time WRITING STEP: %f seconds ##\n", end_time - start_time);
+    #endif
 
     /*Close the file, freeing all resources */
     if ((retval = nc_close(ncid))) ERR(retval);       
 
+    #ifdef LOG
     printf("--- SUCCESS writing data on file %s ---\n", OUTPUT_FILE);
-    
+    #endif
+
     MPI_Finalize();
     return 0;
 }
