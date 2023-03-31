@@ -15,9 +15,6 @@ module load mpich-3.2 hdf5-1.10.5--gcc-9.1.0 netcdf-4.7.0--gcc-9.1.0
 # move to the correct folder
 cd HPC_Project/parallel/MPI
 
-# make file
-mpicc -std=c99 -Wall -g -o ./parallel.out ./parallel.c -I /apps/netCDF4.7.0--gcc-9.1.0/include -L /apps/netCDF4.7.0--gcc-9.1.0/lib -lnetcdf -lm
-
 # run the binary file
 mpiexec -n ${PROCESSES} ./parallel.out
 # mpiexec -n 1 valgrind --leak-check=yes ./parallel # https://stackoverflow.com/questions/34851643/using-valgrind-to-spot-error-in-mpi-code
