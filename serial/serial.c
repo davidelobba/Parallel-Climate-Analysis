@@ -8,12 +8,15 @@
 #include <stdlib.h>
 #include <math.h>
 #include <netcdf.h>
+#include <unistd.h>
 
 //#define LOG /*Print log on command line*/
-#define PRINT_TIME /*Print time on command line*/
 
-#define INPUT_FILE "/home/francesco.laiti/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
+#define WRITE_CSV
+
+#define INPUT_FILE "/home/davide.lobba/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
 #define OUTPUT_FILE "output/pr_reduced.nc" /*Define output name file. Saved in the same directory of serial.c*/
+#define CSV_FILE "output/performance_benchmarks.csv"
 
 #define NLAT 192
 #define NLON 288
@@ -35,6 +38,15 @@
 int main(){
     
     MPI_Init(NULL, NULL);
+    FILE *fpt;
+
+    #ifdef WRITE_CSV
+    if(access(CSV_FILE, F_OK) == -1){
+        fpt = fopen(CSV_FILE, "a");
+        fprintf(fpt, "time\n");
+    }
+    else fpt = fopen(CSV_FILE, "a");
+    #endif
 
     double start_time, end_time;
     int retval;
@@ -108,13 +120,6 @@ int main(){
         }
     }
 
-    end_time = MPI_Wtime();
-
-    #ifdef PRINT_TIME
-    printf("## Time READING STEP 1: %f seconds ##\n", end_time - start_time); /* DEBUG: time for execution*/
-    #endif
-
-    start_time = MPI_Wtime();
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
     for(int lat = 0; lat < NLAT; lat++){
         for(int lon = 0; lon < NLON ; lon++){
@@ -123,6 +128,10 @@ int main(){
     }
 
     end_time = MPI_Wtime();
+
+    #ifdef WRITE_CSV
+    fprintf(fpt, "%f\n", end_time - start_time);
+    #endif
 
     //#ifdef PRINT_TIME
     /* DEBUG: time for execution*/

@@ -10,7 +10,7 @@
 #include <netcdf.h>
 #include <unistd.h>
 
-#define INPUT_FILE "/home/francesco.laiti/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
+#define INPUT_FILE "/home/davide.lobba/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
 #define OUTPUT_FILE "output/pr_reduced.nc" /*Define output name file. Saved in the same directory of serial.c*/
 #define CSV_FILE "output/performance_benchmarks.csv"
 
@@ -52,7 +52,7 @@ int main(){
         #ifdef WRITE_CSV
         if(access(CSV_FILE, F_OK) == -1){
             fpt = fopen(CSV_FILE, "a");
-            fprintf(fpt, "nodes, cores, processes, time\n");
+            fprintf(fpt, "nodes,cores,processes,place,time\n");
         }
         else fpt = fopen(CSV_FILE, "a");
         #endif
@@ -134,18 +134,18 @@ int main(){
         }
     }
 
-    end_time = MPI_Wtime();
     /* LOG: time for execution*/
     printf("## Process %d, Time READING STEP 1: %f seconds ##\n", world_rank, end_time - start_time);
     printf("--- WR: %d pr_out_local[0][0] = %f\n", world_rank, local_pr_out[0][0]);
 
     MPI_Barrier(MPI_COMM_WORLD); // only for benchmarking
     MPI_Reduce(&local_pr_out, &total_pr_out, NLAT*NLON, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // The resulting summation happens on a per-element basis of the matrix
+    end_time = MPI_Wtime();
 
     if (world_rank == 0){
+        
         #ifdef WRITE_CSV
-        //fprintf(fpt, "nodes, cores, processes, time\n");
-        fprintf(fpt, "%d, %d, %d, %f\n", atoi(getenv("NUM_NODES")), atoi(getenv("CPUS_PER_NODE")), world_size, end_time - start_time);
+        fprintf(fpt, "%d, %d, %d, %s, %f\n", atoi(getenv("NUM_NODES")), atoi(getenv("CPUS_PER_NODE")), world_size, getenv("PLACE"), end_time - start_time);
         #endif
 
         start_time = MPI_Wtime();

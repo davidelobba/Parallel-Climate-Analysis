@@ -2,12 +2,13 @@
 
 #PBS -l walltime=0:05:00
 #PBS -q short_cpuQ
-#PBS -v NUM_NODES,CPUS_PER_NODE,PROCESSES,THREADS
+#PBS -v NUM_NODES,CPUS_PER_NODE,PROCESSES,THREADS,PLACE
 
 echo number of processes ${PROCESSES}
 echo number of cores per node ${CPUS_PER_NODE}
 echo number of nodes ${NUM_NODES}
 echo number of threads ${THREADS}
+echo place ${PLACE}
 echo ""
 
 # load modules
