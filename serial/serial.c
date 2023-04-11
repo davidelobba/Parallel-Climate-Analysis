@@ -14,7 +14,7 @@
 
 #define WRITE_CSV
 
-#define INPUT_FILE "/home/davide.lobba/HPC_Project/merged_file.nc" /*Change input netCDF path here*/
+#define INPUT_FILE "../merged_file.nc" /*Change input netCDF path here*/
 #define OUTPUT_FILE "output/pr_reduced.nc" /*Define output name file. Saved in the same directory of serial.c*/
 #define CSV_FILE "output/performance_benchmarks.csv"
 
@@ -57,7 +57,7 @@ int main(){
     int lon_dimid, lat_dimid, time_dimid;
     int ndims;
     size_t nrecord;
-
+    
     /* --- GET INFO STEP --- */
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
     start_time = MPI_Wtime();
