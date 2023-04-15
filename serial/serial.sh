@@ -3,6 +3,7 @@
 #PBS -l select=1:ncpus=1:mem=4gb
 #PBS -l walltime=0:05:00
 #PBS -q short_cpuQ
+#PBS -v PROBLEM_SIZE
 
 # load modules
 module load mpich-3.2 hdf5-1.10.5--gcc-9.1.0 netcdf-4.7.0--gcc-9.1.0

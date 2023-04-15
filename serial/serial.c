@@ -43,7 +43,7 @@ int main(){
     #ifdef WRITE_CSV
     if(access(CSV_FILE, F_OK) == -1){
         fpt = fopen(CSV_FILE, "a");
-        fprintf(fpt, "time\n");
+        fprintf(fpt, "problem_size, time\n");
     }
     else fpt = fopen(CSV_FILE, "a");
     #endif
@@ -56,7 +56,7 @@ int main(){
     int pr_varid, lat_varid, lon_varid;
     int lon_dimid, lat_dimid, time_dimid;
     int ndims;
-    size_t nrecord;
+    size_t nrecord_fromID;
     
     /* --- GET INFO STEP --- */
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
@@ -70,13 +70,18 @@ int main(){
     if ((retval = nc_inq_dimid(ncid, LON_NAME, &lon_dimid))) ERR(retval);
     if ((retval = nc_inq_dimid(ncid, TIME_NAME, &time_dimid))) ERR(retval);
 
-    if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord))) ERR(retval);
+    if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord_fromID))) ERR(retval);
 
-    #ifdef LOG
-    /*DEBUG: Check dim and time dimension */
-    printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord);
-    #endif
-
+    printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord_fromID);
+    
+    
+    int nrecord = (int) nrecord_fromID;
+    float problem_size;
+    if(getenv("PROBLEM_SIZE")){
+        problem_size = atof(getenv("PROBLEM_SIZE"));
+        nrecord = nrecord * problem_size;
+        printf("--- INFO: new problem size set: nrecord = %d with problem size = %f ---\n", nrecord, problem_size);
+    }
     ndims -= 1; // we do not use the bnds dimension, so we need to reduce by one the total number of dims
 
     /* Retrieve variables info */
@@ -89,17 +94,16 @@ int main(){
     if ((retval = nc_get_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
     
     end_time = MPI_Wtime();
-
+    printf("## GET INFO STEP: %f seconds ##\n", end_time - start_time);
+    
     #ifdef LOG
-    /* DEBUG: time for execution */
-    printf("## Time GET INFO STEP: %f seconds ##\n", end_time - start_time);
-
     /* DEBUG: Check if lats and lons were read correctly */
     for (int lat = 0; lat < NLAT; lat++)
         printf("%f \n", lats[lat]);
     for (int lon = 0; lon < NLON; lon++)
         printf("%f \n", lons[lon]);
     #endif
+
 
     /* --- READING STEP --- */
     start_time = MPI_Wtime();
@@ -120,6 +124,12 @@ int main(){
         }
     }
 
+    end_time = MPI_Wtime();
+
+    #ifdef WRITE_CSV
+    fprintf(fpt, "%f, %f\n", problem_size, end_time - start_time);
+    #endif
+
     /* Get the average precipitations over the years for each point of the grid (average precipitations) */
     for(int lat = 0; lat < NLAT; lat++){
         for(int lon = 0; lon < NLON ; lon++){
@@ -127,26 +137,14 @@ int main(){
         }
     }
 
-    end_time = MPI_Wtime();
-
-    #ifdef WRITE_CSV
-    fprintf(fpt, "%f\n", end_time - start_time);
-    #endif
-
-    //#ifdef PRINT_TIME
-    /* DEBUG: time for execution*/
-    //printf("## Time READING STEP 2: %f seconds ##\n", end_time - start_time);
-    //#endif
-
-    /* Close the file */
-    if ((retval = nc_close(ncid))) ERR(retval);
-
-    #ifdef LOG
+    if ((retval = nc_close(ncid))) ERR(retval);     /* Close the file */
     printf("--- SUCCESS reading data from file %s ---\n", INPUT_FILE);
-    #endif
+
 
     /* --- WRITING STEP --- */
+
     start_time = MPI_Wtime();
+
     /* Create the file */
     if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
 
@@ -177,17 +175,13 @@ int main(){
 
     end_time = MPI_Wtime();
 
-    #ifdef PRINT_TIME
     /* DEBUG: time for execution*/
-    printf("## Time WRITING STEP: %f seconds ##\n", end_time - start_time);
-    #endif
+    printf("## WRITING STEP: %f seconds ##\n", end_time - start_time);
 
     /*Close the file, freeing all resources */
     if ((retval = nc_close(ncid))) ERR(retval);       
 
-    #ifdef LOG
     printf("--- SUCCESS writing data on file %s ---\n", OUTPUT_FILE);
-    #endif
 
     MPI_Finalize();
     return 0;
