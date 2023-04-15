@@ -14,8 +14,6 @@
 #include <omp.h> //version 201107 -> 3.1
 #endif
 
-// #include "utils.h"
-
 #define INPUT_FILE "../../merged_file.nc" /*Change input netCDF path here*/
 #define OUTPUT_FILE "output/pr_reduced.nc" /*Define output name file. Saved in the same directory of serial.c*/
 #define CSV_FILE "output/performance_benchmarks.csv"
@@ -51,14 +49,13 @@ int main(int argc, char* argv[]){
 
     FILE *fpt;
 
-    /*LOG*/
     if (world_rank == 0){
         printf("--- INFO: World size = %d ---\n", world_size);
 
         #ifdef WRITE_CSV
         if(access(CSV_FILE, F_OK) == -1){
             fpt = fopen(CSV_FILE, "a");
-            fprintf(fpt, "place,nodes,cores,processes,threads,time\n");
+            fprintf(fpt, "problem_size,place,nodes,cores,processes,threads,time\n");
         }
         else fpt = fopen(CSV_FILE, "a");
         #endif
@@ -71,7 +68,7 @@ int main(int argc, char* argv[]){
     int pr_varid, lat_varid, lon_varid;
     int lon_dimid, lat_dimid, time_dimid;
     int ndims;
-    size_t nrecord;
+    size_t nrecord_fromID;
 
     /* --- GET INFO STEP --- */
     /* Open the file with read-only access, indicated by NC_NOWRITE flag */
@@ -85,12 +82,17 @@ int main(int argc, char* argv[]){
     if ((retval = nc_inq_dimid(ncid, LON_NAME, &lon_dimid))) ERR(retval);
     if ((retval = nc_inq_dimid(ncid, TIME_NAME, &time_dimid))) ERR(retval);
 
-    if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord))) ERR(retval);
+    if ((retval = nc_inq_dimlen(ncid, time_dimid, &nrecord_fromID))) ERR(retval);
 
-    /*DEBUG: Check dim and time dimension
-    printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord);
-    */
+    printf("--- INFO: found dim = %d and nrecord = %zu ---\n", ndims, nrecord_fromID);
 
+    int nrecord = (int) nrecord_fromID;
+    float problem_size;
+    if(getenv("PROBLEM_SIZE")){
+        problem_size = atof(getenv("PROBLEM_SIZE"));
+        nrecord = nrecord * problem_size;
+        printf("--- INFO: new problem size set: nrecord = %d with problem size = %f ---\n", nrecord, problem_size);
+    }
     ndims -= 1; // we do not use the bnds dimension, so we need to reduce by one the total number of dims
 
     /* Retrieve variables info */
@@ -103,16 +105,16 @@ int main(int argc, char* argv[]){
     if ((retval = nc_get_var_float(ncid, lon_varid, &lons[0]))) ERR(retval);
     
     end_time = MPI_Wtime();
-
-    /* DEBUG: time for execution*/
     printf("## Process %d, Time GET INFO STEP: %f seconds ##\n", world_rank, end_time - start_time);
 
-    /* DEBUG: Check if lats and lons were read correctly
+    #ifdef LOG
+    /* DEBUG: Check if lats and lons were read correctly */
     for (int lat = 0; lat < nlat; lat++)
         printf("%f \n", lats[lat]);
     for (int lon = 0; lon < nlon; lon++)
         printf("%f \n", lons[lon]);
-    */
+    #endif
+
 
     /* --- READING STEP --- */
     MPI_Barrier(MPI_COMM_WORLD);
@@ -121,25 +123,20 @@ int main(int argc, char* argv[]){
     float local_pr_in[NLAT][NLON], total_pr_out[NLAT][NLON], local_pr_out[NLAT][NLON];
     size_t start[] = {0, 0, 0}; // 3-dim array
     size_t count[] = {1, NLAT, NLON}; // 3-dim array 
+    int lat, lon;
 
+    //Retreive nrecord that every process needs to compute
     const int rec_per_process = nrecord/world_size;
     int local_start_record = world_rank * rec_per_process;
     int local_end_record = (world_rank + 1) * rec_per_process;
-    int lat, lon;
-
-    if(argc > 0) thread_count = strtol(argv[1], NULL, 10);
-
-    // #ifdef _OPENMP
-    //     int thread_rank = omp_get_thread_num();
-    //     int thread_count = omp_get_num_threads();
-    // #else
-    //     int thread_rank = 0;
-    //     int thread_count = 1;
-    // #endif
-
     if (world_rank == world_size - 1) local_end_record = nrecord; // manage the last batch of record that may not be divided properly
+    
+    #ifdef _OPENMP
+    if(argc > 0) thread_count = strtol(argv[1], NULL, 10);
+    #else
+    thread_count = 1;
+    #endif
 
-    //OMP on NLAT NLON
     /* Get the precipitation value for each time step for each point of the grid, then sum it up to obtain the sum over the years */
     for (int rec = local_start_record; rec < local_end_record; rec++){
         start[0] = rec;
@@ -158,24 +155,23 @@ int main(int argc, char* argv[]){
         //#pragma omp  barrier //Implicit barrier at: end of parallel do/for, single
     }
 
-    end_time = MPI_Wtime();
-    /* DEBUG: time for execution*/
     printf("## Process %d, Time READING STEP 1: %f seconds ##\n", world_rank, end_time - start_time);
     printf("--- WR: %d pr_out_local[0][0] = %f\n", world_rank, local_pr_out[0][0]);
 
     MPI_Barrier(MPI_COMM_WORLD); // only for benchmarking
     MPI_Reduce(&local_pr_out, &total_pr_out, NLAT*NLON, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // The resulting summation happens on a per-element basis of the matrix
+    
+    end_time = MPI_Wtime();
 
     if (world_rank == 0){
         #ifdef WRITE_CSV
         //fprintf(fpt, "nodes, cores, threads, processes, time\n");
-        fprintf(fpt, "%s, %d, %d, %d, %d, %f\n", getenv("PLACE"), atoi(getenv("NUM_NODES")), atoi(getenv("CPUS_PER_NODE")), world_size, thread_count, end_time - start_time);
+        fprintf(fpt, "%f, %s, %d, %d, %d, %d, %f\n", problem_size, getenv("PLACE"), atoi(getenv("NUM_NODES")), atoi(getenv("CPUS_PER_NODE")), world_size, thread_count, end_time - start_time);
         #endif
 
         start_time = MPI_Wtime();
 
-        /*DEBUG*/
-        printf("--- WR: %d pr_out_globa[0][0] = %f\n", world_rank, total_pr_out[0][0]);
+        printf("--- WR: %d pr_out_global[0][0] = %f\n", world_rank, total_pr_out[0][0]);
         
         /* Get the average precipitations over the years for each point of the grid (average precipitations) */
         for(int lat = 0; lat < NLAT; lat++){
@@ -186,16 +182,13 @@ int main(int argc, char* argv[]){
     
         end_time = MPI_Wtime();
 
-        /* DEBUG: time for execution*/
         printf("## Time READING STEP 2: %f seconds ##\n", end_time - start_time);
 
-        /* Close the file */
         if ((retval = nc_close(ncid))) ERR(retval);
+        printf("--- SUCCESS reading data from file %s ---\n", INPUT_FILE);
 
-        //printf("--- SUCCESS reading data from file %s ---\n", INPUT_FILE);
 
-
-        /* WRITING STEP: only done by process 0*/
+        /* WRITING STEP*/
         start_time = MPI_Wtime();
         /* Create the file */
         if ((retval = nc_create(OUTPUT_FILE, NC_CLOBBER, &ncid))) ERR(retval);
