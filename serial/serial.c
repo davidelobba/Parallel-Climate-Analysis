@@ -43,7 +43,7 @@ int main(){
     #ifdef WRITE_CSV
     if(access(CSV_FILE, F_OK) == -1){
         fpt = fopen(CSV_FILE, "a");
-        fprintf(fpt, "problem_size, time\n");
+        fprintf(fpt, "problem_size,time\n");
     }
     else fpt = fopen(CSV_FILE, "a");
     #endif

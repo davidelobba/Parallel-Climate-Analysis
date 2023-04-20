@@ -1,7 +1,7 @@
 # env variables used in the script for writing csv file
 export NUM_NODES=4
-export PLACE=pack:excl
-export THREADS
+export PLACE=scatter:excl
+export THREADS=4
 export PROCESSES
 export CPUS_PER_NODE
 export PROBLEM_SIZE
@@ -14,16 +14,13 @@ mpicc -std=c99 -Wall -g -fopenmp -o ./parallel.out ./parallel.c -I /apps/netCDF4
 
 for PROBLEM_SIZE in 0.25 0.5 1
 do
-    for PROCESSES in 4 8 16 #24 32 64 96 128
+    for PROCESSES in 4 8 16 24 #32 64 96 128
     do
-        for THREADS in 2 4 6
+        for RUN in $(seq 1 3)
         do
-            for RUN in $(seq 1 3)
-            do
-                mkdir -p output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}
-                export CPUS_PER_NODE=$((($THREADS*$PROCESSES)/$NUM_NODES))
-                qsub -Wblock=true -N mpi_openmp_run${RUN} -l select=${NUM_NODES}:ncpus=$(($CPUS_PER_NODE)):mem=4gb -l place=${PLACE} -o output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}/result.log -e output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}/error.log parallel.sh
-            done
+            mkdir -p output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}
+            export CPUS_PER_NODE=$((($THREADS*$PROCESSES)/$NUM_NODES))
+            qsub -Wblock=true -N mpi_openmp_run${RUN} -l select=${NUM_NODES}:ncpus=$(($CPUS_PER_NODE)):mem=4gb -l place=${PLACE} -o output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}/result.log -e output/log/mpi_openMP/problem_${PROBLEM_SIZE}/np_${PROCESSES}/thr_${THREADS}/run_${RUN}/error.log parallel.sh
         done
     done
 done
