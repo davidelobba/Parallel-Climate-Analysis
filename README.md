@@ -6,6 +6,13 @@
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#introduction">Introduction</a></li>
+    <li><a href="How-to-run-the-code-man_technologist">How to run the code</a></li>
+      <ul>
+        <li><a href="#serial-code-bug">Serial code</a></li>
+        <li><a href="#mpi-code-rocket">MPI code</a></li>
+        <li><a href="#hybrid-code-rocket">Hybrid code</a></li>
+      </ul>
+    </li>
     <li><a href="#dataset">Dataset</a></li>
     <li><a href="#serial-implementation">Serial Implementation</a></li>
     <li><a href="#parallel-implementation">Parallel Implementation</a>
@@ -27,6 +34,48 @@
 ### Introduction
 
 Our work wants to explore the implementation of a parallel climate analysis tool using structured data to exploit the hardware resources of the [Unitn HPC cluster](https://sites.google.com/unitn.it/hpc/). In order to extract and analyze vast amounts of climate data, it is important to exploit parallel computing to achieve in an efficient way and in short time the desired results.
+
+### How to run the code :man_technologist:
+- Clone the repository
+
+   ```sh
+   git clone https://github.com/davidelobba/Parallel-Climate-Analysis.git
+   ```
+- cd to the desired implementation the user wants to run
+
+   ```sh
+   cd serial/
+   ```
+   or
+   ```sh
+   cd parallel/MPI_openMP/
+   ```
+### Serial code :bug:
+Run from command line the following code:
+  ```sh
+   bash launch.sh
+   ```
+In this way, the serial code is going to be run. Specifically the code will be run on 0.25, 0.5 and 1.0 of problem size, which are the sizes of the dataset. It is important to note that each configuration is going to be run 3 times, in order to avoid I/O unpredictable behaviours.
+
+### MPI code :rocket:
+
+Before launching the code, it is important to edit in the [launch.sh](https://github.com/davidelobba/Parallel-Climate-Analysis/tree/main/parallel/MPI_openMP/launch.sh) the threads part setting just 1 thread, otherwise the MPI with OpenMP solution will be run.
+
+Then, run from command line the following code:
+  ```sh
+   bash launch.sh
+   ```
+The code will be run on 0.25, 0.5 and 1.0 of problem size, which are the sizes of the dataset. Moreover, the code will be run with different numbers of processes, in order to have a consistent benchmark. It is important to note that each configuration is going to be run 3 times, in order to avoid I/O unpredictable behaviours.
+
+### Hybrid code :rocket:
+If the user has previously edited the [launch.sh](https://github.com/davidelobba/Parallel-Climate-Analysis/tree/main/parallel/MPI_openMP/launch.sh), go back to the default settings for the thread variable, otherwise the MPI solution will be run.
+
+Then, run from command line the following code:
+  ```sh
+   bash launch.sh
+   ```
+The code will be run on 0.25, 0.5 and 1.0 of problem size, which are the sizes of the dataset. Moreover, the code will be run with different numbers of processes and threads, in order to have a consistent benchmark. It is important to note that each configuration is going to be run 3 times, in order to avoid I/O unpredictable behaviours.
+
 
 ### Dataset
 For this project, we decided to use precipitation flux datasets available in a shared folder of the HPC@Unitrento cluster. The data are stored in a NetCDF (Network Common Data Form) format. The data are organized in the following way:
@@ -72,8 +121,7 @@ $$ Cores\ per\ node = {{Processes} \over {Nodes}} $$
 
 As expected, the MPI version outperforms the serial one.
 
-For a deeper analysis we suggest to look at the section 5.2 of the [project's report](https://github.com/davidelobba/parallel-climate-analysis/HPC_report.pdf) 
-
+For a deeper analysis we suggest to look at the section 5.2 of the [project's report](https://github.com/davidelobba/Parallel-Climate-Analysis/tree/main/HPC_report.pdf) 
 
 ### Hybrid parallelization performance
 For the hybrid parallelization we decided to fix the number of nodes to 4 and use a placement strategy place=scatter:excl. This type of configuration helped us to compare the two parallel versions. For the assignment of the right number of cores to run our parallel program, we adopted the following relation:
@@ -82,7 +130,7 @@ $$ Cores\ per\ node = {{Threads \times Processes} \over {Nodes}} $$
 
 Threads are allocated on the same node and, if possible, on the same socket to guarantee fast communication between them. Also the hybrid parallelization outperforms the serial solution.
 
-For a deeper analysis we suggest to look at the section 5.3 of the [project's report](https://github.com/davidelobba/parallel-climate-analysis/HPC_report.pdf) 
+For a deeper analysis we suggest to look at the section 5.3 of the [project's report](https://github.com/davidelobba/Parallel-Climate-Analysis/tree/main/HPC_report.pdf) 
 
 ### Conclusions
 With this project, we designed, implemented and tested three different solutions to perform climate analysis using structured data on precipitation flux records. As expected, parallel versions outperform the serial one. In addition, it can be argued that simply increasing the number of processors does not always lead to improved performances. Rather, it is important to balance the allocation of resources, while also accounting for any potential overheads introduced.
