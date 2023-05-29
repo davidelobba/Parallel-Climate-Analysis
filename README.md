@@ -1,4 +1,3 @@
-<br />
 <div align="center">
   <h1 align="center">:mag: Parallel climate analysis using structured data</h1>
   <p align="center"> 
