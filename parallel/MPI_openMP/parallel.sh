@@ -8,7 +8,7 @@
 module load mpich-3.2 hdf5-1.10.5--gcc-9.1.0 netcdf-4.7.0--gcc-9.1.0
 
 # move to the correct folder
-cd HPC_Project/parallel/MPI_openMP
+cd Parallel-Climate-Analysis/parallel/MPI_openMP
 
 # run the binary file
 mpiexec -n ${PROCESSES} --map-by socket --bind-to core ./parallel.out ${THREADS}
