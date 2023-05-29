@@ -63,7 +63,9 @@ In addition, in order to obtain more consistent results, given the fact that a s
 The notebook [```merge_datasets.ipynb```](utils/merge_datasets.ipynb) provides a script to merge multiple datasets into one.
 
 ## Final results
-Mean precipitation flux from 1850-01-01 to 2014-12-31 (60225 days).
+Mean precipitation flux from 1850-01-01 to 2014-12-31 (60225 days). 
 | Standard scale | Logarithmic scale |
 |--------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | [![](assets/precipitation_flux.png)](assets/precipitation_flux.png)              | [![](assets/precipitation_flux_logarithmic_scale.png)](assets/precipitation_flux_logarithmic_scale.png)         |
+
+> Displayed using Panoply data viewer from NASA.
