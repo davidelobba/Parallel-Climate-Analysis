@@ -50,10 +50,12 @@ Build and launch the jobs
 ## Job configurations
 Every ```launch.sh``` build first the project, then submit several jobs to the cluster with different configurations. The job can be setup using different parameters:
 
-- ```PROBLEM_SIZE```. This variable determines the size of the problem. Three size are available: 0.25, 0.5, 1 (original size problem);
-- ```PROCESSES```. This variable determines the number of processes to be used;
-- ```THREADS```. This variable determines the number of threads to be used by each process;
-- ```RUN```. This variable represents the run number for each configuration. We decided to run the same configuration 3 times in order to avoid I/O unpredictable behaviours.
+- ```PROBLEM_SIZE```: Size of the problem. Three option are set by default: 0.25, 0.5, 1 (original size problem);
+- ```PROCESSES```: Number of processes to be used;
+- ```THREADS```: This variable determines the number of threads to be used by each process;
+- ```RUN```: Run number for each configuration. We decided to run the same configuration 3 times in order to avoid I/O unpredictable behaviours;
+- ```NUM_NODES```: Number of nodes requested to the cluster. By default is set to 4;
+- ```PLACE```: PBS placing strategy. By default is set to ```scatter:excl```.
 
 ## Dataset
 For this project, we decided to use precipitation flux datasets available in a shared folder of the HPC@Unitrento cluster. The data are stored in a NetCDF (Network Common Data Form) format.
