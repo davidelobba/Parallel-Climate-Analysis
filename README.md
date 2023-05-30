@@ -25,7 +25,7 @@ With this work, we deliver a parallel climate analysis tool using structured dat
 ## Report and presentation
 | <b>Report</b> | <b>Presentation</b> |
 |--------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| [![](assets/report_thumbnail.png)](report.pdf)              | [![](assets/presentation_thumbnail.png)](presentation.pdf)         |
+| [![](assets/report_thumbnail.png)](report.pdf)              | [![](assets/presentation_thumbnail.png)](https://docs.google.com/presentation/d/1PK7jNbIn0aWCHLMJlLJKZ3gFgZcOcLJJu0YqkxWUoIQ/edit?usp=sharing)         |
 
 ## Build and run
 Clone the repository
